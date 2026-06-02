@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: bims-transit-report-tool
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: BIMS_SERVICE_KEY
+        sync: false
+      - key: APP_ACCESS_CODE
+        sync: false

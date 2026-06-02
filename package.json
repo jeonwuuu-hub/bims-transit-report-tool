@@ -1,0 +1,13 @@
+{
+  "name": "bims-transit-report-tool",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BIMS 기준 대중교통 현황표 자동화 웹툴",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

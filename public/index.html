@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BIMS 대중교통 현황표 자동화</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <section id="accessGate" class="access-gate" hidden>
+      <form id="accessForm" class="access-card">
+        <p class="eyebrow">Private Access</p>
+        <h1>BIMS 대중교통 현황표</h1>
+        <label>
+          접근 코드
+          <input id="gateAccessCode" type="password" autocomplete="off" placeholder="관리자가 공유한 코드" />
+        </label>
+        <button class="primary wide" type="submit">입장</button>
+        <p id="accessError" class="hint error" hidden></p>
+      </form>
+    </section>
+
+    <main id="appShell" class="app-shell">
+      <aside class="control-panel">
+        <div class="brand-block">
+          <p class="eyebrow">Busan BIMS</p>
+          <h1>대중교통 현황표</h1>
+        </div>
+
+        <section class="panel-section">
+          <h2>기준 설정</h2>
+          <label>
+            사업지명
+            <input id="siteName" type="text" value="사업지" autocomplete="off" />
+          </label>
+          <label>
+            중심 위도
+            <input id="centerLat" type="number" step="0.000001" placeholder="35.179938" />
+          </label>
+          <label>
+            중심 경도
+            <input id="centerLng" type="number" step="0.000001" placeholder="129.076914" />
+          </label>
+          <label>
+            반경
+            <div class="inline-input">
+              <input id="radius" type="number" min="50" max="3000" step="50" value="500" />
+              <span>m</span>
+            </div>
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>BIMS 연결</h2>
+          <div id="serverKeyNotice" class="notice" hidden></div>
+          <label id="accessCodeLabel" hidden>
+            접근 코드
+            <input id="accessCode" type="password" autocomplete="off" placeholder="관리자가 공유한 코드" />
+          </label>
+          <label>
+            공공데이터포털 서비스키
+            <input id="serviceKey" type="password" autocomplete="off" placeholder="Decoding 또는 Encoding key" />
+          </label>
+          <label class="checkbox-line">
+            <input id="rememberKey" type="checkbox" />
+            <span>이 브라우저에 키 보관</span>
+          </label>
+          <div class="button-grid">
+            <button id="runBims" class="primary" type="button">BIMS 조회</button>
+            <button id="runSample" type="button">샘플 실행</button>
+          </div>
+          <p class="hint">
+            좌표는 카카오맵/네이버맵에서 복사하고, 정류장·노선·운행정보는 BIMS 기준으로 생성합니다.
+          </p>
+        </section>
+
+        <section class="panel-section">
+          <h2>내보내기</h2>
+          <div class="button-grid">
+            <button id="copyReport" type="button">표 복사</button>
+            <button id="downloadCsv" type="button">CSV 저장</button>
+          </div>
+          <button id="downloadCad" class="wide" type="button">CAD용 정류장 좌표 CSV</button>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <div class="status-bar">
+          <div>
+            <p id="statusLabel" class="status-label">대기 중</p>
+            <p id="statusDetail" class="status-detail">사업지 좌표와 반경을 넣고 BIMS 조회를 실행하세요.</p>
+          </div>
+          <progress id="progress" value="0" max="100"></progress>
+        </div>
+
+        <section class="summary-strip" aria-label="요약">
+          <div>
+            <span>정류장</span>
+            <strong id="stopCount">0</strong>
+          </div>
+          <div>
+            <span>전체 노선</span>
+            <strong id="routeCount">0</strong>
+          </div>
+          <div>
+            <span>일반</span>
+            <strong id="normalCount">0</strong>
+          </div>
+          <div>
+            <span>심야</span>
+            <strong id="nightCount">0</strong>
+          </div>
+          <div>
+            <span>마을</span>
+            <strong id="villageCount">0</strong>
+          </div>
+        </section>
+
+        <nav class="tabs" aria-label="결과 보기">
+          <button class="tab active" data-tab="stops" type="button">정류장별</button>
+          <button class="tab" data-tab="routes" type="button">노선 운행현황</button>
+          <button class="tab" data-tab="cad" type="button">CAD 좌표</button>
+          <button class="tab" data-tab="log" type="button">처리 로그</button>
+        </nav>
+
+        <section id="stops" class="tab-panel active">
+          <div class="table-tools">
+            <h2>정류장별 운행노선</h2>
+            <span id="stopBasis">BIMS 정류소ID 기준</span>
+          </div>
+          <div class="table-wrap">
+            <table id="stopTable">
+              <thead>
+                <tr>
+                  <th>조사지점</th>
+                  <th>정류소명</th>
+                  <th>정류소번호</th>
+                  <th>거리(m)</th>
+                  <th>운행노선</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="table-tools grouped-title">
+            <h2>보고서용 묶음표</h2>
+            <span>동일 노선 조합은 자동 병합</span>
+          </div>
+          <div class="table-wrap">
+            <table id="groupedStopTable">
+              <thead>
+                <tr>
+                  <th>조사지점</th>
+                  <th>운행노선</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="routes" class="tab-panel">
+          <div class="table-tools">
+            <h2>대중교통(버스) 노선별 운행현황</h2>
+            <span id="routeBasis">부산시 BIMS 노선정보 기준</span>
+          </div>
+          <div class="table-wrap">
+            <table id="routeTable">
+              <thead>
+                <tr>
+                  <th>구분</th>
+                  <th>노선번호</th>
+                  <th>기점</th>
+                  <th>종점</th>
+                  <th>첫차</th>
+                  <th>막차</th>
+                  <th>출퇴근</th>
+                  <th>평일</th>
+                  <th>공휴일</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="cad" class="tab-panel">
+          <div class="table-tools">
+            <h2>도면 표기용 정류장 좌표</h2>
+            <span>번호, 위도, 경도, 거리</span>
+          </div>
+          <div class="table-wrap">
+            <table id="cadTable">
+              <thead>
+                <tr>
+                  <th>번호</th>
+                  <th>정류소명</th>
+                  <th>정류소번호</th>
+                  <th>위도</th>
+                  <th>경도</th>
+                  <th>거리(m)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="log" class="tab-panel">
+          <pre id="logOutput"></pre>
+        </section>
+      </section>
+    </main>
+
+    <template id="emptyRowTemplate">
+      <tr>
+        <td colspan="9" class="empty-cell">아직 생성된 결과가 없습니다.</td>
+      </tr>
+    </template>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
