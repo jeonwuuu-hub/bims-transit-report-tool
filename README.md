@@ -1,45 +1,62 @@
-# BIMS 대중교통 현황표 자동화
+# 부산 대중교통 현황표 자동생성 도구
 
-부산시 버스정보시스템(BIMS) OpenAPI를 기준으로 사업지 반경 내 버스정류장, 정류장별 통과 노선, 노선별 운행현황표를 생성하는 로컬 웹툴입니다.
+카카오맵 기준 위도/경도와 반경을 입력하면 부산BIMS API를 호출해 부산 버스 정류장 위치도, 정류장 목록, 정류장별 경유노선, 노선별 운행현황 표를 생성하는 로컬 웹툴입니다.
+
+## API 키 설정
+
+API 키는 화면에 입력하지 않습니다. 아래 둘 중 하나로 서버에서 읽습니다.
+
+1. `config.local.json` 파일
+
+```json
+{
+  "apiKey": "공공데이터포털 부산BIMS 서비스키",
+  "mapProvider": "osm",
+  "kakaoJavascriptKey": "",
+  "naverNcpKeyId": ""
+}
+```
+
+2. 환경변수
+
+```powershell
+$env:DATA_GO_KR_API_KEY="공공데이터포털 부산BIMS 서비스키"
+```
 
 ## 실행
 
 ```powershell
-& 'C:\Users\User\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' .\server.js
-```
-
-브라우저에서 `http://127.0.0.1:5177`을 엽니다.
-
-## 사용 순서
-
-1. 카카오맵 또는 네이버맵에서 사업지 중심 좌표를 확인합니다.
-2. 사업지명, 중심 위도, 중심 경도, 반경을 입력합니다.
-3. 공공데이터포털에서 승인받은 `부산광역시_부산버스정보시스템` 서비스키를 입력합니다.
-4. `BIMS 조회`를 누릅니다.
-5. 생성된 정류장별 운행노선표와 노선 운행현황표를 복사하거나 CSV로 저장합니다.
-
-## 기준 데이터
-
-- 정류장: BIMS `busStopList`
-- 노선 운행정보: BIMS `busInfo`
-- 노선별 경유 정류소: BIMS `busInfoByRouteId`
-
-서비스키가 없을 때는 `샘플 실행`으로 화면과 내보내기 형식을 확인할 수 있습니다.
-
-## 인터넷 링크로 배포
-
-다른 사람이 링크로 접속하게 하려면 이 폴더를 GitHub 저장소에 올린 뒤 Render, Railway, Fly.io 같은 Node.js 웹서비스 호스팅에 배포합니다.
-
-배포 환경변수:
-
-- `BIMS_SERVICE_KEY`: 공공데이터포털 BIMS 서비스키. 이 값을 넣으면 사용자는 화면에서 서비스키를 입력하지 않아도 됩니다.
-- `APP_ACCESS_CODE`: 선택사항. 설정하면 링크를 받은 사람도 이 접근 코드를 입력해야 BIMS 조회가 됩니다.
-- `PORT`: 호스팅 서비스가 자동으로 넣는 경우가 많습니다. 로컬에서는 기본값 `5177`을 사용합니다.
-
-배포 명령:
-
-```bash
 npm start
 ```
 
-호스팅 서비스에서는 보통 `package.json`의 `start` 스크립트를 자동으로 사용합니다.
+Node 실행 경로 문제가 있으면 아래 스크립트를 사용합니다.
+
+```powershell
+.\start-tool.ps1
+```
+
+브라우저에서 `http://localhost:5178`을 열고 위도, 경도, 반경을 입력합니다.
+
+## 좌표 기준
+
+- 입력 좌표: 카카오맵 위도/경도, WGS84(EPSG:4326)
+- 결과 좌표: 캐드 수치지도용 CAD X/Y, Korea 2000 / East Belt 2010(EPSG:5187)
+- CAD 표기는 `X=Easting`, `Y=Northing` 기준입니다.
+
+## 배경지도
+
+- 기본값은 API 키 없이 동작하는 OpenStreetMap 배경지도입니다.
+- 카카오맵을 쓰려면 `mapProvider`를 `kakao`로 바꾸고 `kakaoJavascriptKey`에 카카오 지도 JavaScript 키를 입력합니다.
+- 네이버맵을 쓰려면 `mapProvider`를 `naver`로 바꾸고 `naverNcpKeyId`에 네이버 지도 `ncpKeyId`를 입력합니다.
+
+## 데이터 기준
+
+- 정류소 목록: 부산광역시 부산버스정보시스템 `busStopList`
+- 정류장별 경유노선: 부산광역시 부산버스정보시스템 도착정보 및 `busInfoByRouteId`
+- 노선 운행현황: 부산광역시 부산버스정보시스템 `busInfo`
+
+## 메모
+
+- `config.local.json`은 `.gitignore`에 포함되어 있습니다.
+- 입력 위도/경도는 소수점 14자리 수준으로 처리하고, 결과 CAD 좌표는 m 단위 소수점 3자리까지 표시합니다.
+- 생성된 표는 한글/워드/엑셀에 붙여넣거나 `.xls` 형식으로 저장할 수 있습니다.
